@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Separador Pro Corel</title>
+<style>
+:root{--bg:#10151d;--panel:#192330;--panel2:#202d3b;--line:#344456;--text:#eef4fa;--muted:#a8b7c7;--green:#20b889;--blue:#4d9cff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px Arial,sans-serif}
+header{height:66px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;background:#141c26;border-bottom:1px solid var(--line)}
+.brand{font-size:19px;font-weight:700}.brand span{color:var(--green)}.status{font-size:12px;color:var(--muted)}
+main{display:grid;grid-template-columns:250px minmax(280px,1fr) 260px;gap:14px;padding:14px;height:calc(100vh - 66px);min-height:580px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px;overflow:auto}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:#c4d2df;margin:0 0 14px}
+button,.upload{border:0;border-radius:8px;padding:11px 12px;background:var(--green);color:#06251c;font-weight:700;cursor:pointer;text-align:center;display:block;width:100%;margin:8px 0}
+button.secondary{background:var(--panel2);border:1px solid var(--line);color:var(--text)}button:disabled{opacity:.4;cursor:not-allowed}
+.hint{color:var(--muted);font-size:12px;line-height:1.5}.stage{background:#0c1118;border:1px dashed #45586c;border-radius:12px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;min-height:360px}
+canvas{max-width:100%;max-height:100%;object-fit:contain;touch-action:none;cursor:crosshair}.empty{text-align:center;color:var(--muted);padding:30px}.empty strong{display:block;color:var(--text);font-size:18px;margin-bottom:8px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.toolbar button{width:auto;margin:0}
+.layer{background:var(--panel2);border:1px solid var(--line);padding:10px;border-radius:8px;margin:7px 0;color:var(--muted)}
+.tag{font-size:11px;color:#8fe1c7}.note{background:#172f2b;border:1px solid #24614f;padding:10px;border-radius:8px;color:#bcebdc;font-size:12px;margin-top:14px}
+input[type=file]{display:none}.progress{height:6px;background:#2a3948;border-radius:8px;overflow:hidden;margin:10px 0}.progress i{display:block;height:100%;width:0;background:var(--green);transition:width .2s}
+#message{font-size:12px;color:var(--muted);min-height:34px;margin-top:8px}
+@media(max-width:900px){main{grid-template-columns:1fr;height:auto}.stage{height:55vh;min-height:320px}header{padding:0 14px}.status{display:none}}
+</style></head>
+<body>
+<header><div class="brand">SEPARADOR <span>PRO COREL</span></div><div class="status">Recorte manual • Versão inicial para publicação</div></header>
+<main>
+<aside class="panel">
+<h2>Imagem</h2><label class="upload" for="file">＋ Importar imagem</label><input id="file" type="file" accept="image/*">
+<button id="ai" disabled title="Função ainda não implementada">✦ Separação automática por IA (em desenvolvimento)</button>
+<button class="secondary" id="manual" disabled>Modo de recorte manual</button>
+<button class="secondary" id="reset" disabled>Limpar imagem</button>
+<div class="progress"><i id="bar"></i></div><div id="message">Importe uma imagem para usar o recorte manual. A separação automática por IA ainda não está implementada.</div>
+<p class="hint">Esta versão permite importar imagens, selecionar áreas e exportar recortes PNG. A integração de IA será desenvolvida e testada em uma etapa posterior.</p>
+<div class="note">Recorte manual: arraste sobre a imagem para selecionar uma área e exportá-la em PNG.</div>
+</aside>
+<section><div class="toolbar"><button class="secondary" id="clear" disabled>Desmarcar seleção</button><button class="secondary" id="save" disabled>Exportar recorte PNG</button></div>
+<div class="stage"><div class="empty" id="empty"><strong>Área de trabalho</strong>Importe uma imagem para começar.</div><canvas id="canvas" hidden></canvas></div></section>
+<aside class="panel"><h2>Elementos detectados</h2><div id="layers"><div class="layer">🖼️ Imagem original<br><span class="tag">Aguardando arquivo</span></div></div>
+<h2 style="margin-top:24px">Formato de saída</h2><div class="layer">PNG transparente <span class="tag">Disponível para recorte manual</span></div><div class="layer">SVG vetorial <span class="tag">Etapa futura</span></div>
+<p class="hint">Quando o backend de IA estiver conectado, cada máscara retornada será listada aqui para baixar separadamente.</p></aside>
+</main>
+<script>
+const $=s=>document.querySelector(s), file=$('#file'), canvas=$('#canvas'),ctx=canvas.getContext('2d');
+let img=null,rect=null,start=null,drag=false,sourceFile=null;
+function say(t){$('#message').textContent=t}
+function redraw(){if(!img)return;ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0);if(rect){ctx.fillStyle='rgba(32,184,137,.2)';ctx.strokeStyle='#20b889';ctx.lineWidth=Math.max(2,canvas.width/500);ctx.fillRect(rect.x,rect.y,rect.w,rect.h);ctx.strokeRect(rect.x,rect.y,rect.w,rect.h)}}
+function enable(v){['#ai','#manual','#reset'].forEach(s=>$(s).disabled=!v);$('#clear').disabled=!rect;$('#save').disabled=!rect}
+file.onchange=e=>{sourceFile=e.target.files[0];if(!sourceFile)return;if(!sourceFile.type.startsWith('image/')){say('Escolha um arquivo de imagem.');return}
+const url=URL.createObjectURL(sourceFile);img=new Image();img.onload=()=>{canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;canvas.hidden=false;$('#empty').hidden=true;rect=null;redraw();enable(true);$('#layers').innerHTML='<div class="layer">🖼️ '+sourceFile.name+'<br><span class="tag">'+canvas.width+' × '+canvas.height+' px</span></div>';say('Imagem carregada. Você pode testar o recorte manual ou preparar a separação por IA.');URL.revokeObjectURL(url)};img.src=url};
+function point(e){const b=canvas.getBoundingClientRect();return{x:Math.max(0,Math.min(canvas.width,(e.clientX-b.left)*canvas.width/b.width)),y:Math.max(0,Math.min(canvas.height,(e.clientY-b.top)*canvas.height/b.height))}}
+canvas.onpointerdown=e=>{if(!img)return;canvas.setPointerCapture(e.pointerId);start=point(e);rect={x:start.x,y:start.y,w:0,h:0};drag=true;redraw()};
+canvas.onpointermove=e=>{if(!drag)return;const p=point(e);rect={x:Math.min(start.x,p.x),y:Math.min(start.y,p.y),w:Math.abs(start.x-p.x),h:Math.abs(start.y-p.y)};redraw()};
+canvas.onpointerup=()=>{if(!drag)return;drag=false;if(rect.w<3||rect.h<3)rect=null;redraw();enable(!!img);if(rect){$('#layers').innerHTML+='<div class="layer">▧ Seleção manual<br><span class="tag">'+Math.round(rect.w)+' × '+Math.round(rect.h)+' px</span></div>';say('Área selecionada. Use Exportar recorte PNG.')}};
+function exportCrop(){if(!rect)return;const out=document.createElement('canvas');out.width=Math.round(rect.w);out.height=Math.round(rect.h);out.getContext('2d').drawImage(img,rect.x,rect.y,rect.w,rect.h,0,0,out.width,out.height);const a=document.createElement('a');a.href=out.toDataURL('image/png');a.download='elemento-separado.png';a.click()}
+$('#save').onclick=exportCrop;$('#clear').onclick=()=>{rect=null;redraw();enable(!!img);say('Seleção removida.')};
+$('#reset').onclick=()=>{img=null;rect=null;sourceFile=null;canvas.hidden=true;$('#empty').hidden=false;file.value='';enable(false);$('#layers').innerHTML='<div class="layer">🖼️ Imagem original<br><span class="tag">Aguardando arquivo</span></div>';say('Importe uma imagem para começar.')};
+$('#manual').onclick=()=>say('Modo manual ativo: arraste sobre a imagem para marcar o elemento que deseja recortar.');
+$('#ai').onclick=()=>say('A separação automática por IA ainda está em desenvolvimento. Use o recorte manual nesta versão.');
+</script></body></html>
